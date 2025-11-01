@@ -1,0 +1,37 @@
+[package]
+name = "pqc-combo"
+version = "0.0.1"
+edition = "2021"
+description = "Minimalist no_std + no_alloc PQC core: NIST Level 5 Kyber1024 + Level 3 Dilithium3"
+license = "MIT"
+keywords = ["kyber", "dilithium", "pqc", "no-std", "no-alloc"]
+categories = ["pqc", "no-std", "no-alloc", "embedded"]
+repository = "https://github.com/AaronSchnacky1/pqc-combo"
+readme = "README.md"
+authors = ["Aaron Schnacky <aaronschnacky@gmail.com>"]
+homepage = "https://www.aaronschnacky.com/"
+documentation = "https://github.com/AaronSchnacky1/pqc-combo/blob/main/README.md"
+## Security See [SECURITY.md](./SECURITY.md) for threat model.
+
+# no_alloc by default — maximum security
+[features]
+default = []
+alloc = []  # Only for one test (tampering detection)
+std = [
+    "pqcrypto-kyber/std",
+    "pqcrypto-dilithium/std",
+    "rand_core/std",
+    "zeroize/std",
+    "alloc",  # std implies alloc
+]
+
+[dependencies]
+pqcrypto-kyber      = { version = "0.8.1", default-features = false }
+pqcrypto-dilithium  = { version = "0.5.0", default-features = false }
+pqcrypto-traits     = { version = "0.3.5", default-features = false }
+
+zeroize = { version = "1.6", default-features = false, features = ["derive"] }
+rand_core = { version = "0.6", default-features = false }
+
+[dev-dependencies]
+rand = "0.8"
