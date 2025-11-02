@@ -13,14 +13,11 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       
-      # Test 1
-      - name: 🧪 Test 1: Default (no_std + no_alloc)
+      - name: Test 1 Default (no_std + no_alloc)
         run: cargo test 
         
-      # Test 2
-      - name: 🧪 Test 2: Alloc (no_std + alloc)
+      - name: Test 2 Alloc (no_std + alloc)
         run: cargo test --features alloc
         
-      # Test 3
-      - name: 🧪 Test 3: STD (std + alloc)
+      - name: Test 3 STD (std + alloc)
         run: cargo test --features std
