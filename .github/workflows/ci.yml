@@ -13,7 +13,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
       
-      # Line 16 (Original error location) starts here
       - name: 🧪 Test 1: Default (no_std + no_alloc)
         run: cargo test 
         
