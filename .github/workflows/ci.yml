@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ master ]  # <-- This was "main"
+    branches: [ master ]
   pull_request:
-    branches: [ master ]  # <-- This was "main"
+    branches: [ master ]
 
 jobs:
   test:
@@ -12,12 +12,12 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      
+
       - name: Test 1 Default (no_std + no_alloc)
         run: cargo test 
-        
+
       - name: Test 2 Alloc (no_std + alloc)
         run: cargo test --features alloc
-        
+
       - name: Test 3 STD (std + alloc)
         run: cargo test --features std
