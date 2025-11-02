@@ -12,12 +12,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-
+      
+      # Line 16 (Original error location) starts here
       - name: 🧪 Test 1: Default (no_std + no_alloc)
-        run: cargo test
-
+        run: cargo test 
+        
       - name: 🧪 Test 2: Alloc (no_std + alloc)
         run: cargo test --features alloc
-
+        
       - name: 🧪 Test 3: STD (std + alloc)
-        run: cargo test --features std  # <-- NEW STEP
+        run: cargo test --features std
