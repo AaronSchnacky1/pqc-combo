@@ -1,4 +1,7 @@
-# `pqc-combo` — Minimalist Post-Quantum Cryptography Core
+[![CI](https://github.com/AaronSchnacky1/pqc-combo/workflows/CI/badge.svg)](https://github.com/AaronSchnacky1/pqc-combo/actions)
+[![Crates.io](https://img.shields.io/crates/v/pqc-combo.svg)](https://crates.io/crates/pqc-combo)
+
+# pqc-combo — Minimalist Post-Quantum Cryptography Core
 
 > **NIST Level 5 KEM + Level 3 Signatures**  
 > **`no_std` + `no_alloc` by default**  
