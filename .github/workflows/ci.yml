@@ -1,23 +1,34 @@
-name: CI
+name: Rust CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ "main" ]
   pull_request:
-    branches: [ master ]
+    branches: [ "main" ]
+
+env:
+  CARGO_TERM_COLOR: always
 
 jobs:
-  test:
+  build_and_test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
+    - uses: actions/checkout@v4
+    - name: Build
+      run: cargo build
 
-      - name: Test 1 Default (no_std + no_alloc)
-        run: cargo test 
+    - name: Run Tests (no_std + no_alloc)
+      run: cargo test --no-default-features
 
-      - name: Test 2 Alloc (no_std + alloc)
-        run: cargo test --features alloc
+    - name: Run Tests (no_std + alloc)
+      # This explicitly tests the `no_std` + `alloc` target
+      run: cargo test --no-default-features --features alloc
 
-      - name: Test 3 STD (std + alloc)
-        run: cargo test --features std
+    - name: Run Tests (std + alloc)
+      # This tests the full `std` target
+      run: cargo test --features std
+
+    - name: Lint and Format (Optional)
+      run: |
+        cargo fmt --check
+        cargo clippy --all-targets --all-features -- -D warnings
