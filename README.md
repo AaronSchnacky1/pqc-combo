@@ -23,7 +23,13 @@ pqc-combo = { version = "0.0.3", features = ["alloc"] }
 # For std support (e.g., concurrency)
 pqc-combo = { version = "0.0.3", features = ["std"] }
 
+3 unfinished functions: (do fuzzing last)
 
+Ecosystem Confidence (Interop): We've only proven your library works with itself. We haven't proven it's compatible with other Rust libraries that implement FIPS 203/204.  
+
+Usability Confidence (FFI): We don't know if your C-API works at all. The Python test is required to prove that other languages can actually use your .dll file.
+
+Security Confidence (Fuzzing): We don't know if it's safe against truly random garbage data. Fuzzing is the gold standard for finding panics (Denial of Service) that unit tests miss. 
 
 
 Links
