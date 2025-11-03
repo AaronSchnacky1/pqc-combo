@@ -8,4 +8,3 @@ pub enum PqcError {
 }
 
 pub type Result<T> = core::result::Result<T, PqcError>;
-

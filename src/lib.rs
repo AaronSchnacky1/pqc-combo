@@ -11,15 +11,14 @@ extern crate alloc;
 // are automatically randomized via getrandom.
 use pqcrypto_kyber::kyber1024::{
     self,
+    Ciphertext as KyberCiphertext,
     // keypair, // Use the standard function -- REMOVED (unused)
     // encapsulate, // Use the standard function -- REMOVED (unused)
-    PublicKey   as KyberPublicKey,
-    SecretKey   as KyberSecretKey,
-    Ciphertext  as KyberCiphertext,
+    PublicKey as KyberPublicKey,
+    SecretKey as KyberSecretKey,
     SharedSecret as KyberSharedSecret,
 };
 // --- End Imports ---
-
 
 // Import SharedSecret for KEM test (always in test)
 #[cfg(test)]
@@ -30,8 +29,8 @@ use pqcrypto_traits::kem::SharedSecret;
 use pqcrypto_traits::kem::Ciphertext;
 
 use pqcrypto_dilithium::dilithium3::{
-    sign,
     open,
+    sign,
     // keypair is imported in mod tests
     PublicKey as DilithiumPublicKey,
     SecretKey as DilithiumSecretKey,
@@ -61,15 +60,12 @@ impl KyberKeys {
 // --- Simplified Encapsulation ---
 // This one function works for both std and no_std.
 // It no longer takes an RNG or returns a Result.
-pub fn encapsulate_shared_secret(
-    pk: &KyberPublicKey,
-) -> (KyberCiphertext, KyberSharedSecret) {
+pub fn encapsulate_shared_secret(pk: &KyberPublicKey) -> (KyberCiphertext, KyberSharedSecret) {
     let (ss, ct) = kyber1024::encapsulate(pk);
     (ct, ss)
 }
 
 // --- End Simplified Functions ---
-
 
 pub fn decapsulate_shared_secret(
     sk: &KyberSecretKey,
@@ -101,30 +97,27 @@ mod tests {
     use pqcrypto_dilithium::dilithium3::keypair as dilithium_keypair;
 
     // --- Imports for advanced tests ---
-    
+
     // Import traits for as_bytes() and from_bytes()
     use pqcrypto_traits::kem::{
-        PublicKey as KemPublicKeyTrait, 
-        SecretKey as KemSecretKeyTrait, 
-        Ciphertext as KemCiphertextTrait
+        Ciphertext as KemCiphertextTrait, PublicKey as KemPublicKeyTrait,
+        SecretKey as KemSecretKeyTrait,
     };
     use pqcrypto_traits::sign::{
-        PublicKey as SignPublicKeyTrait, 
-        SecretKey as SignSecretKeyTrait,
-        SignedMessage as SignSignedMessageTrait
+        PublicKey as SignPublicKeyTrait, SecretKey as SignSecretKeyTrait,
+        SignedMessage as SignSignedMessageTrait,
     };
-    
+
     // Imports for alloc/std features
     #[cfg(feature = "alloc")]
-    use alloc::{vec, vec::Vec, boxed::Box};
-    
+    use alloc::{boxed::Box, vec, vec::Vec};
+
     #[cfg(feature = "std")]
-    use std::{thread, sync::Arc};
+    use std::{sync::Arc, thread};
 
     // --- Imports for NEW Priority 1 Tests ---
-    use rand_core::{RngCore, SeedableRng};
-    use rand_chacha::ChaCha8Rng; // Add `rand_chacha` to [dev-dependencies]
-
+    use rand_chacha::ChaCha8Rng;
+    use rand_core::{RngCore, SeedableRng}; // Add `rand_chacha` to [dev-dependencies]
 
     // --- Original Tests (Grouped) ---
 
@@ -142,7 +135,7 @@ mod tests {
         let (pk, sk) = dilithium_keypair();
         let msg = b"The secure PQC core is audited.";
         let signed = sign_message(&sk, msg);
-        
+
         // Test success
         assert!(verify_signature(&pk, msg, &signed));
 
@@ -173,9 +166,9 @@ mod tests {
     #[cfg(feature = "alloc")]
     #[test]
     fn test_sign_verify_large_message() {
-        let (pk, sk) = dilithium_keypair(); 
+        let (pk, sk) = dilithium_keypair();
         // Create a 1MB message (10MB is excessive for a unit test)
-        let msg = vec![0x42; 1 * 1024 * 1024]; 
+        let msg = vec![0x42; 1 * 1024 * 1024];
         let signed = sign_message(&sk, &msg);
         assert!(verify_signature(&pk, &msg, &signed));
     }
@@ -196,7 +189,7 @@ mod tests {
             .expect("tampered ciphertext should have correct length");
 
         let ss_t = decapsulate_shared_secret(&keys.sk, &tampered_ct);
-        
+
         // Decapsulation of tampered text should not equal original shared secret
         assert_ne!(ss_a.as_bytes(), ss_t.as_bytes());
     }
@@ -210,23 +203,23 @@ mod tests {
 
         // Tamper with the signature
         let mut bytes = signed.as_bytes().to_vec();
-        
+
         let last_index = bytes.len() - 1;
         bytes[last_index] ^= 0xFF; // Flip last byte
-        
+
         let tampered_sig = DilithiumSignedMessage::from_bytes(&bytes)
             .expect("tampered signature should have correct length");
 
         // Verification should fail
         assert!(!verify_signature(&pk, msg, &tampered_sig));
     }
-    
+
     #[test]
     fn test_invalid_key_length() {
         // Test truncated key
         let bad_key_bytes = [0u8; pqcrypto_kyber::kyber1024::public_key_bytes() - 1];
         assert!(KyberPublicKey::from_bytes(&bad_key_bytes).is_err());
-        
+
         // Test oversized key (slicing)
         let bad_key_bytes_long = [0u8; pqcrypto_kyber::kyber1024::public_key_bytes() + 1];
         assert!(KyberPublicKey::from_bytes(&bad_key_bytes_long).is_err());
@@ -245,7 +238,7 @@ mod tests {
         let msg = b"message signed by A";
 
         let signed = sign_message(&sk_a, msg);
-        
+
         // Verify with pk_b should fail
         assert!(!verify_signature(&pk_b, msg, &signed));
     }
@@ -267,13 +260,13 @@ mod tests {
     }
 
     // --- Category 6: Security and Side-Channel Tests ---
-    
+
     #[test]
     fn test_deterministic_signatures() {
         // Dilithium signing is deterministic (no RNG)
         let (_pk, sk) = dilithium_keypair();
         let msg = b"test message";
-        
+
         let sig1 = sign_message(&sk, msg);
         let sig2 = sign_message(&sk, msg);
 
@@ -281,7 +274,7 @@ mod tests {
     }
 
     // --- Category 7: State and Lifecycle Tests ---
-    
+
     #[test]
     fn test_keypair_serialization_deserialization() {
         // *** FIX: Remove .unwrap() ***
@@ -293,7 +286,7 @@ mod tests {
         let sk_dil_bytes = sk_dil.as_bytes();
         let pk_dil_rt = DilithiumPublicKey::from_bytes(&pk_dil_bytes).unwrap();
         let sk_dil_rt = DilithiumSecretKey::from_bytes(&sk_dil_bytes).unwrap();
-        
+
         assert_eq!(pk_dil.as_bytes(), pk_dil_rt.as_bytes());
         // *** FIX: Add missing `!` to macro ***
         assert_eq!(sk_dil.as_bytes(), sk_dil_rt.as_bytes());
@@ -332,7 +325,7 @@ mod tests {
 
             handles.push(thread::spawn(move || {
                 let msg = format!("message from thread {}", i).into_bytes();
-                
+
                 // Test 1: Concurrent keygen (uses local sk)
                 let (local_pk, local_sk) = dilithium_keypair();
                 let local_sig = sign_message(&local_sk, &msg);
@@ -341,7 +334,7 @@ mod tests {
                 // Test 2: Concurrent verification (uses shared pk)
                 let sig = sign_message(&sk_dil, &msg); // Need local SK for this test
                 assert!(verify_signature(&pk_dil, &msg, &sig));
-                
+
                 // Test 3: Concurrent decapsulation (uses shared sk)
                 let (ct, ss_a) = encapsulate_shared_secret(&pk_kyber);
                 let ss_b = decapsulate_shared_secret(&sk_kyber, &ct);
@@ -353,7 +346,6 @@ mod tests {
             handle.join().unwrap();
         }
     }
-
 
     // -----------------------------------------------
     // --- NEW PRIORITY 1 TESTS (from tests/kats.rs) ---
@@ -370,15 +362,19 @@ mod tests {
         // *** FIX: Remove .unwrap() ***
         let keys_valid = KyberKeys::generate_key_pair();
         let (ct_valid, ss_valid) = encapsulate_shared_secret(&keys_valid.pk);
-        
+
         // 2. Create a zeroed Secret Key
         let zeros_ky_sk_bytes = [0u8; pqcrypto_kyber::kyber1024::secret_key_bytes()];
         // from_bytes will succeed as it only checks length
-        let sk_zero = KyberSecretKey::from_bytes(&zeros_ky_sk_bytes).unwrap(); 
+        let sk_zero = KyberSecretKey::from_bytes(&zeros_ky_sk_bytes).unwrap();
 
         // 3. Decapsulating with zeroed SK should fail (produce different SS)
         let ss_bad = decapsulate_shared_secret(&sk_zero, &ct_valid);
-        assert_ne!(ss_valid.as_bytes(), ss_bad.as_bytes(), "Decapsulation succeeded with zeroed SK");
+        assert_ne!(
+            ss_valid.as_bytes(),
+            ss_bad.as_bytes(),
+            "Decapsulation succeeded with zeroed SK"
+        );
 
         // --- Dilithium ---
         // 1. Generate a valid keypair and signature
@@ -389,22 +385,25 @@ mod tests {
         // 2. Create a zeroed Public Key
         let zeros_dil_pk_bytes = [0u8; pqcrypto_dilithium::dilithium3::public_key_bytes()];
         // from_bytes will succeed as it only checks length
-        let pk_zero = DilithiumPublicKey::from_bytes(&zeros_dil_pk_bytes).unwrap(); 
+        let pk_zero = DilithiumPublicKey::from_bytes(&zeros_dil_pk_bytes).unwrap();
 
         // 3. Verifying with zeroed PK should fail
-        assert!(!verify_signature(&pk_zero, msg, &sig_valid), "Signature verified with zeroed PK");
+        assert!(
+            !verify_signature(&pk_zero, msg, &sig_valid),
+            "Signature verified with zeroed PK"
+        );
     }
 
     #[test]
     fn test_deserialize_random_bytes() {
         let mut rng = ChaCha8Rng::seed_from_u64(42);
-        
+
         // --- Kyber ---
         // 1. Generate a valid keypair and SS
         // *** FIX: Remove .unwrap() ***
         let keys_valid = KyberKeys::generate_key_pair();
         let (ct_valid, ss_valid) = encapsulate_shared_secret(&keys_valid.pk);
-        
+
         // 2. Create a random Secret Key
         let mut rand_ky_sk_bytes = [0u8; pqcrypto_kyber::kyber1024::secret_key_bytes()];
         rng.fill_bytes(&mut rand_ky_sk_bytes);
@@ -413,7 +412,11 @@ mod tests {
 
         // 3. Decapsulating with random SK should fail (produce different SS)
         let ss_bad = decapsulate_shared_secret(&sk_rand, &ct_valid);
-        assert_ne!(ss_valid.as_bytes(), ss_bad.as_bytes(), "Decapsulation succeeded with random SK");
+        assert_ne!(
+            ss_valid.as_bytes(),
+            ss_bad.as_bytes(),
+            "Decapsulation succeeded with random SK"
+        );
 
         // --- Dilithium ---
         // 1. Generate a valid keypair and signature
@@ -425,12 +428,14 @@ mod tests {
         let mut rand_dil_pk_bytes = [0u8; pqcrypto_dilithium::dilithium3::public_key_bytes()];
         rng.fill_bytes(&mut rand_dil_pk_bytes);
         // from_bytes will succeed as it only checks length
-        let pk_rand = DilithiumPublicKey::from_bytes(&rand_dil_pk_bytes).unwrap(); 
+        let pk_rand = DilithiumPublicKey::from_bytes(&rand_dil_pk_bytes).unwrap();
 
         // 3. Verifying with random PK should fail
-        assert!(!verify_signature(&pk_rand, msg, &sig_valid), "Signature verified with random PK");
+        assert!(
+            !verify_signature(&pk_rand, msg, &sig_valid),
+            "Signature verified with random PK"
+        );
     }
-
 
     // -----
     // 3. Category 4: API Misuse (2 Tests)
@@ -446,7 +451,7 @@ mod tests {
         assert!(KyberCiphertext::from_bytes(empty_bytes).is_err());
         assert!(DilithiumPublicKey::from_bytes(empty_bytes).is_err());
         assert!(DilithiumSecretKey::from_bytes(empty_bytes).is_err());
-        
+
         // This assertion was removed as it fails due to an upstream
         // bug in pqcrypto-dilithium when `alloc` is not present.
         // assert!(DilithiumSignedMessage::from_bytes(empty_bytes).is_err());
@@ -457,19 +462,21 @@ mod tests {
         let (pk_orig, _) = dilithium_keypair();
         let pk = DilithiumPublicKey::from_bytes(pk_orig.as_bytes()).unwrap();
         let msg = b"test message";
-        
+
         // Create a default, empty (all-zero) signature
         let empty_sig_bytes = [0u8; pqcrypto_dilithium::dilithium3::signature_bytes()];
-        
+
         // We check if from_bytes succeeds (it shouldn't, but if it does,
         // verification must fail).
         if let Ok(empty_sig) = DilithiumSignedMessage::from_bytes(&empty_sig_bytes) {
-             let verification_result = verify_signature(&pk, msg, &empty_sig);
-             assert!(!verification_result, "Verification succeeded with an empty/zeroed signature");
+            let verification_result = verify_signature(&pk, msg, &empty_sig);
+            assert!(
+                !verification_result,
+                "Verification succeeded with an empty/zeroed signature"
+            );
         }
         // If from_bytes fails, the test passes implicitly, as an invalid sig was rejected.
     }
-
 
     // -----
     // 4. Category 6: Security (1 Test)
@@ -485,17 +492,24 @@ mod tests {
 
         // Generate first pair
         let (ct1, ss1) = encapsulate_shared_secret(&pk);
-        
+
         // Generate second pair
         let (ct2, ss2) = encapsulate_shared_secret(&pk);
 
         // The ciphertexts MUST be different
-        assert_ne!(ct1.as_bytes(), ct2.as_bytes(), "Ciphertexts were identical, KEM is not randomized!");
-        
-        // The shared secrets MUST also be different
-        assert_ne!(ss1.as_bytes(), ss2.as_bytes(), "Shared secrets were identical, KEM is not randomized!");
-    }
+        assert_ne!(
+            ct1.as_bytes(),
+            ct2.as_bytes(),
+            "Ciphertexts were identical, KEM is not randomized!"
+        );
 
+        // The shared secrets MUST also be different
+        assert_ne!(
+            ss1.as_bytes(),
+            ss2.as_bytes(),
+            "Shared secrets were identical, KEM is not randomized!"
+        );
+    }
 
     // -----
     // 5. Category 7: Lifecycle (1 Test)
@@ -510,7 +524,7 @@ mod tests {
         // 1. Test Kyber Ciphertext
         let (pk_orig, _) = kyber1024::keypair();
         let (ct_orig, _) = encapsulate_shared_secret(&pk_orig);
-        
+
         let ct_bytes = ct_orig.as_bytes();
         let ct_new = KyberCiphertext::from_bytes(ct_bytes).unwrap();
         assert_eq!(ct_orig.as_bytes(), ct_new.as_bytes());
@@ -525,4 +539,3 @@ mod tests {
         assert_eq!(sig_orig.as_bytes(), sig_new.as_bytes());
     }
 }
-
