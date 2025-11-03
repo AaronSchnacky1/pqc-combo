@@ -1,5 +1,5 @@
 [![CI Status](https://github.com/AaronSchnacky1/pqc-combo/actions/workflows/ci.yml/badge.svg)](https://github.com/AaronSchnacky1/pqc-combo/actions)
-pqc-combo v0.0.4 — 18 hardening tests across all three environments
+pqc-combo v0.0.3 — 18 hardening tests across all three environments
 
 NIST Level 5 KEM + Level 3 Signatures  
 Zero heap. Zero warnings. Maximum security.
