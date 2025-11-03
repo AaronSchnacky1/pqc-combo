@@ -11,9 +11,10 @@ env:
 
 jobs:
   test-and-check:
-    name: Test on ${{ matrix.os }} with features: ${{ matrix.features }}
+    # Moved runs-on to be the first key to ensure parser compliance
     runs-on: ubuntu-latest
-    
+    name: Test on ${{ matrix.os }} with features: ${{ matrix.features }}
+
     # This matrix defines your 5 test configurations
     strategy:
       matrix:
@@ -61,7 +62,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           # Install the embedded target if our matrix job needs it
-          targets: ${{ matrix.target }} 
+          targets: ${{ matrix.target }}
 
       # --- This is the core logic for the 5 tests ---
       - name: Run Cargo Command
@@ -99,3 +100,4 @@ jobs:
           cargo fmt --check
           echo "Running clippy..."
           cargo clippy --all-targets --all-features -- -D warnings
+
