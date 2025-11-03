@@ -1,7 +1,7 @@
 [![CI Status](https://github.com/AaronSchnacky1/pqc-combo/actions/workflows/ci.yml/badge.svg)](https://github.com/AaronSchnacky1/pqc-combo/actions)
 pqc-combo v0.0.3 — 18 hardening tests across all three environments
 
-Kyber L5 + Dilithium L3.
+NIST Kyber L5 + Dilithium L3.
 Zero heap. Zero warnings. Maximum security.
 
 no_std + no_alloc by default  
