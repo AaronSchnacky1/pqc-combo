@@ -2,7 +2,6 @@
 pqc-combo v0.0.3 — 18-Point Hardening & Robustness Suite Passed 🛡️
 
 NIST Level 5 KEM + Level 3 Signatures  
-INCLUDES TESTS PASSED: PQCkemKAT_3168.rsp & PQCsignKAT_4016.rsp
 Zero heap. Zero warnings. Maximum security.
 
 no_std + no_alloc by default  
