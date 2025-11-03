@@ -2,7 +2,7 @@
 name = "pqc-combo"
 version = "0.0.3"
 edition = "2021"
-description = "18-Point Tests: PQCkemKAT_3168 & PQCsignKAT_4016: no_std + no_alloc + std + alloc : NIST Level 5 Kyber1024 + Level 3 Dilithium3"
+description = "18 hardening tests across all three environments: no_std + no_alloc + std + alloc : NIST Level 5 Kyber1024 + Level 3 Dilithium3"
 license = "MIT"
 keywords = ["kyber", "dilithium", "pqc", "no-std", "no-alloc"]
 categories = ["cryptography", "no-std", "embedded"]
