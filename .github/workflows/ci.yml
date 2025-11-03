@@ -2,33 +2,100 @@ name: Rust CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "master" ]
   pull_request:
-    branches: [ "main" ]
+    branches: [ "master" ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build_and_test:
+  test-and-check:
+    name: Test on ${{ matrix.os }} with features: ${{ matrix.features }}
     runs-on: ubuntu-latest
+    
+    # This matrix defines your 5 test configurations
+    strategy:
+      matrix:
+        include:
+          # Test 1: 'std' build (Runs all tests)
+          - name: "std (host)"
+            os: ubuntu-latest
+            features: "std"
+            command: test # 'cargo test'
+            target: ""
+
+          # Test 2: 'default' build (host, no_std, no_alloc)
+          - name: "default (host)"
+            os: ubuntu-latest
+            features: "" # This means --no-default-features
+            command: check # 'cargo check'
+            target: ""
+
+          # Test 3: 'alloc' build (host, no_std)
+          - name: "alloc (host)"
+            os: ubuntu-latest
+            features: "alloc"
+            command: check # 'cargo check'
+            target: ""
+
+          # Test 4: 'no_std' (embedded)
+          - name: "no_std (embedded)"
+            os: ubuntu-latest
+            features: "" # --no-default-features
+            command: check # 'cargo check'
+            target: "thumbv7em-none-eabihf" # Your embedded target
+
+          # Test 5: 'no_std + alloc' (embedded)
+          - name: "no_std + alloc (embedded)"
+            os: ubuntu-latest
+            features: "alloc"
+            command: check # 'cargo check'
+            target: "thumbv7em-none-eabihf"
+
     steps:
-    - uses: actions/checkout@v4
-    - name: Build
-      run: cargo build
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Run Tests (no_std + no_alloc)
-      run: cargo test --no-default-features
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          # Install the embedded target if our matrix job needs it
+          targets: ${{ matrix.target }} 
 
-    - name: Run Tests (no_std + alloc)
-      # This explicitly tests the `no_std` + `alloc` target
-      run: cargo test --no-default-features --features alloc
+      # --- This is the core logic for the 5 tests ---
+      - name: Run Cargo Command
+        run: |
+          # Base command
+          CMD="cargo ${{ matrix.command }}"
+          
+          # Add --no-default-features if features are empty or "alloc"
+          # The 'std' build is the only one that uses default features (of its deps)
+          if [ "${{ matrix.features }}" = "" ] || [ "${{ matrix.features }}" = "alloc" ]; then
+            CMD="$CMD --no-default-features"
+          fi
+          
+          # Add features if they are specified
+          if [ "${{ matrix.features }}" != "" ]; then
+            CMD="$CMD --features ${{ matrix.features }}"
+          fi
+          
+          # Add target if it is specified
+          if [ "${{ matrix.target }}" != "" ]; then
+            CMD="$CMD --target ${{ matrix.target }}"
+          fi
+          
+          # Run the constructed command
+          echo "Running: $CMD"
+          $CMD
 
-    - name: Run Tests (std + alloc)
-      # This tests the full `std` target
-      run: cargo test --features std
-
-    - name: Lint and Format (Optional)
-      run: |
-        cargo fmt --check
-        cargo clippy --all-targets --all-features -- -D warnings
+      # --- This step is separate from the matrix ---
+      # We run fmt and clippy just once on the 'std' build
+      # to avoid redundant checks.
+      - name: Lint and Format
+        if: matrix.features == 'std'
+        run: |
+          echo "Running format check..."
+          cargo fmt --check
+          echo "Running clippy..."
+          cargo clippy --all-targets --all-features -- -D warnings
