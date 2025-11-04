@@ -20,7 +20,7 @@ jobs:
         # Define the full matrix of features to cover all environments
         features:
           # 1. Base PQC (no_std, no_alloc) - Uses default features = []
-          - "" 
+          - "default"
           # 2. PQC + AES-GCM (no_std, no_alloc)
           - "aes-gcm"
           # 3. PQC + Alloc + AES-GCM (no_std, alloc)
@@ -45,21 +45,14 @@ jobs:
           sudo apt-get install -y gcc
 
       - name: Run Tests
-        # We handle the feature matrix logic here:
-        # If matrix.features is the empty string "", we run `cargo test`.
-        # Otherwise, we run with features enabled, checking for std/alloc flags.
-        
+        # Use cargo test, explicitly handling the default case for clarity
         run: |
-          if [ "${{ matrix.features }}" == "" ]; then
-            # Default configuration (no_std, no_alloc, PQC only)
+          if [ "${{ matrix.features }}" == "default" ]; then
+            # Default configuration (no features enabled)
             echo "Running: cargo test"
             cargo test
-          elif [ "${{ matrix.features }}" == "aes-gcm" ]; then
-            # PQC + AES-GCM (no_std, no_alloc)
-            echo "Running: cargo test --no-default-features --features aes-gcm"
-            cargo test --no-default-features --features aes-gcm
           else
-            # Handles alloc, std, and combinations
-            echo "Running: cargo test --features ${{ matrix.features }}"
-            cargo test --features ${{ matrix.features }}
+            # All other configurations use --no-default-features and explicitly enable features
+            echo "Running: cargo test --no-default-features --features ${{ matrix.features }}"
+            cargo test --no-default-features --features ${{ matrix.features }}
           fi
