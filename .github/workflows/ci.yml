@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  test:
+    name: Test ${{ matrix.os }} / ${{ matrix.rust }} / ${{ matrix.name }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+        rust: [stable]
+        include:
+          - name: "no-std (default)"
+            features: ""
+            command: "cargo test --lib --no-default-features"
+          - name: "no-std (aes-gcm)"
+            features: "aes-gcm"
+            command: "cargo test --lib --no-default-features --features aes-gcm"
+          - name: "alloc (aes-gcm)"
+            features: "alloc,aes-gcm"
+            command: "cargo test --lib --no-default-features --features 'alloc,aes-gcm'"
+          - name: "std (full)"
+            features: "std,aes-gcm"
+            command: "cargo test --features 'std,aes-gcm'"
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ matrix.rust }}
+
+      - name: Install build tools (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc
+
+      - name: Run tests
+        run: ${{ matrix.command }}
+
+  integration-test:
+    name: Integration Tests (FIPS 203/204 Compliance)
+    runs-on: ${{ matrix.os }}
+    needs: test
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - name: Run FIPS compliance tests
+        run: cargo test --features std --test integration
+
+  build-ffi:
+    name: Build FFI library (release)
+    runs-on: ${{ matrix.os }}
+    needs: [test, integration-test]
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: stable
+      - run: cargo build --release --features std
+      - name: Upload shared library
+        uses: actions/upload-artifact@v4
+        with:
+          name: pqc-combo-ffi-${{ matrix.os }}
+          path: |
+            target/release/libpqc_combo.so
+            target/release/pqc_combo.dll
