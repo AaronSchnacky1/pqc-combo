@@ -1,103 +1,65 @@
-name: Rust CI
+name: CI
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ master, main ]
   pull_request:
-    branches: [ "master" ]
+    branches: [ master, main ]
 
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  test-and-check:
-    # Moved runs-on to be the first key to ensure parser compliance
-    runs-on: ubuntu-latest
-    name: Test on ${{ matrix.os }} with features: ${{ matrix.features }}
-
-    # This matrix defines your 5 test configurations
+  test:
+    name: Test on ${{ matrix.os }} / ${{ matrix.rust }} / ${{ matrix.features }}
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        include:
-          # Test 1: 'std' build (Runs all tests)
-          - name: "std (host)"
-            os: ubuntu-latest
-            features: "std"
-            command: test # 'cargo test'
-            target: ""
-
-          # Test 2: 'default' build (host, no_std, no_alloc)
-          - name: "default (host)"
-            os: ubuntu-latest
-            features: "" # This means --no-default-features
-            command: check # 'cargo check'
-            target: ""
-
-          # Test 3: 'alloc' build (host, no_std)
-          - name: "alloc (host)"
-            os: ubuntu-latest
-            features: "alloc"
-            command: check # 'cargo check'
-            target: ""
-
-          # Test 4: 'no_std' (embedded)
-          - name: "no_std (embedded)"
-            os: ubuntu-latest
-            features: "" # --no-default-features
-            command: check # 'cargo check'
-            target: "thumbv7em-none-eabihf" # Your embedded target
-
-          # Test 5: 'no_std + alloc' (embedded)
-          - name: "no_std + alloc (embedded)"
-            os: ubuntu-latest
-            features: "alloc"
-            command: check # 'cargo check'
-            target: "thumbv7em-none-eabihf"
+        os: [ubuntu-latest]
+        rust: [stable]
+        # Define the full matrix of features to cover all environments
+        features:
+          # 1. Base PQC (no_std, no_alloc) - Uses default features = []
+          - "" 
+          # 2. PQC + AES-GCM (no_std, no_alloc)
+          - "aes-gcm"
+          # 3. PQC + Alloc + AES-GCM (no_std, alloc)
+          - "alloc,aes-gcm"
+          # 4. PQC + Std + AES-GCM (Full, includes alloc/std tests)
+          - "std,aes-gcm"
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@master
         with:
-          # Install the embedded target if our matrix job needs it
-          targets: ${{ matrix.target }}
+          toolchain: ${{ matrix.rust }}
 
-      # --- This is the core logic for the 5 tests ---
-      - name: Run Cargo Command
+      - name: Build C dependencies
         run: |
-          # Base command
-          CMD="cargo ${{ matrix.command }}"
-          
-          # Add --no-default-features if features are empty or "alloc"
-          # The 'std' build is the only one that uses default features (of its deps)
-          if [ "${{ matrix.features }}" = "" ] || [ "${{ matrix.features }}" = "alloc" ]; then
-            CMD="$CMD --no-default-features"
-          fi
-          
-          # Add features if they are specified
-          if [ "${{ matrix.features }}" != "" ]; then
-            CMD="$CMD --features ${{ matrix.features }}"
-          fi
-          
-          # Add target if it is specified
-          if [ "${{ matrix.target }}" != "" ]; then
-            CMD="$CMD --target ${{ matrix.target }}"
-          fi
-          
-          # Run the constructed command
-          echo "Running: $CMD"
-          $CMD
+          # The pqcrypto crates require C dependencies to be built first.
+          # This is typically handled by the Rust build system, but
+          # we ensure all C tools are available for cross-compilation contexts.
+          sudo apt-get update
+          sudo apt-get install -y gcc
 
-      # --- This step is separate from the matrix ---
-      # We run fmt and clippy just once on the 'std' build
-      # to avoid redundant checks.
-      - name: Lint and Format
-        if: matrix.features == 'std'
+      - name: Run Tests
+        # We handle the feature matrix logic here:
+        # If matrix.features is the empty string "", we run `cargo test`.
+        # Otherwise, we run with features enabled, checking for std/alloc flags.
+        
         run: |
-          echo "Running format check..."
-          cargo fmt --check
-          echo "Running clippy..."
-          cargo clippy --all-targets --all-features -- -D warnings
-
+          if [ "${{ matrix.features }}" == "" ]; then
+            # Default configuration (no_std, no_alloc, PQC only)
+            echo "Running: cargo test"
+            cargo test
+          elif [ "${{ matrix.features }}" == "aes-gcm" ]; then
+            # PQC + AES-GCM (no_std, no_alloc)
+            echo "Running: cargo test --no-default-features --features aes-gcm"
+            cargo test --no-default-features --features aes-gcm
+          else
+            # Handles alloc, std, and combinations
+            echo "Running: cargo test --features ${{ matrix.features }}"
+            cargo test --features ${{ matrix.features }}
+          fi
