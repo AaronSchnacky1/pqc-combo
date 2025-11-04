@@ -11,17 +11,25 @@ env:
 
 jobs:
   test:
-    name: Test ${{ matrix.os }} / ${{ matrix.rust }} / ${{ matrix.features }}
+    name: Test ${{ matrix.os }} / ${{ matrix.rust }} / ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest]
         rust: [stable]
-        features:
-          - "default"
-          - "aes-gcm"
-          - "alloc,aes-gcm"
-          - "std,aes-gcm"
+        include:
+          - name: "no-std (default)"
+            features: ""
+            command: "cargo test --lib --no-default-features"
+          - name: "no-std (aes-gcm)"
+            features: "aes-gcm"
+            command: "cargo test --lib --no-default-features --features aes-gcm"
+          - name: "alloc (aes-gcm)"
+            features: "alloc,aes-gcm"
+            command: "cargo test --lib --no-default-features --features 'alloc,aes-gcm'"
+          - name: "std (full)"
+            features: "std,aes-gcm"
+            command: "cargo test --features 'std,aes-gcm'"
 
     steps:
       - uses: actions/checkout@v4
@@ -38,12 +46,7 @@ jobs:
           sudo apt-get install -y gcc
 
       - name: Run tests
-        run: |
-          if [ "${{ matrix.features }}" == "default" ]; then
-            cargo test
-          else
-            cargo test --no-default-features --features ${{ matrix.features }}
-          fi
+        run: ${{ matrix.command }}
 
   build-ffi:
     name: Build FFI library (release)
