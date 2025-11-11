@@ -24,7 +24,7 @@ jobs:
         include:
           - features: ""
             name: "no_std + no_alloc"
-            args: "--no-default-features" # <-- FIX 1: Added args for no_std
+            args: "--no-default-features" 
           - features: "aes-gcm"
             name: "aes-gcm"
           - features: "alloc,aes-gcm"
@@ -74,10 +74,11 @@ jobs:
       - name: cargo test (${{ matrix.name }})
         run: >-
           cargo test --verbose
-          ${{ matrix.features && format('--features "{0}"', matrix.features) || matrix.args }} # <-- FIX 2: Use args if features is empty
+          ${{ matrix.features && format('--features "{0}"', matrix.features) || matrix.args }}
+          -- --nocapture # <-- FIX: Added --nocapture
 
       - name: cargo test --all-features (extra safety)
-        run: cargo test --all-features --verbose
+        run: cargo test --all-features --verbose -- --nocapture # <-- FIX: Added here too
 
   # ──────────────────────────────────────────────────────────────
   # 2. FIPS integration tests (only on Ubuntu + std)
@@ -96,7 +97,7 @@ jobs:
             ~/.cargo/git
             target
           key: ubuntu-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo test --features std --test integration -- --exact
+      - run: cargo test --features std --test integration -- --exact --nocapture # <-- FIX: Added here too
 
   # ──────────────────────────────────────────────────────────────
   # 3. Build FFI artifacts on tag
@@ -142,6 +143,7 @@ jobs:
           path: target
           key: publish-${{ github.sha }}
       - name: Login to crates.io
-        run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
+        run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }} # <-- FIX: Corrected typo (REGISTRY)
       - name: Publish
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+```eof

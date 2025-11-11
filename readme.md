@@ -1,12 +1,9 @@
-```markdown
-# pqc-combo v0.0.7 
-**ML-KEM-1024 + ML-DSA-65 + AES-256-GCM**  
-**Pure Rust • Zero Heap**
-
 [![CI](https://github.com/AaronSchnacky1/pqc-combo/actions/workflows/ci.yml/badge.svg)](https://github.com/AaronSchnacky1/pqc-combo/actions/workflows/ci.yml)
 [![crates.io](https://img.shields.io/crates/v/pqc-combo.svg?label=pqc-combo)](https://crates.io/crates/pqc-combo)
 [![Docs](https://docs.rs/pqc-combo/badge.svg)](https://docs.rs/pqc-combo)
 
+# pqc-combo v0.0.7 
+**ML-KEM-1024 + ML-DSA-65 + AES-256-GCM**  
 **25 hardening tests • 5 feature configurations • 100% pass rate**  
 **KATs verified • Pair-wise Consistency Tests 9/9 PASS**  
 **FIPS 203/204 format compliance • Tamper-proof • Zero warnings**
