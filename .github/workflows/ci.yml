@@ -75,10 +75,10 @@ jobs:
         run: >-
           cargo test --verbose
           ${{ matrix.features && format('--features "{0}"', matrix.features) || matrix.args }}
-          -- --nocapture # <-- FIX: Added --nocapture
+          -- --nocapture 
 
       - name: cargo test --all-features (extra safety)
-        run: cargo test --all-features --verbose -- --nocapture # <-- FIX: Added here too
+        run: cargo test --all-features --verbose -- --nocapture 
 
   # ──────────────────────────────────────────────────────────────
   # 2. FIPS integration tests (only on Ubuntu + std)
@@ -97,7 +97,7 @@ jobs:
             ~/.cargo/git
             target
           key: ubuntu-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo test --features std --test integration -- --exact --nocapture # <-- FIX: Added here too
+      - run: cargo test --features std --test integration -- --exact --nocapture 
 
   # ──────────────────────────────────────────────────────────────
   # 3. Build FFI artifacts on tag
@@ -143,7 +143,9 @@ jobs:
           path: target
           key: publish-${{ github.sha }}
       - name: Login to crates.io
-        run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }} # <-- FIX: Corrected typo (REGISTRY)
+        run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
       - name: Publish
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+
+# End of workflow
 ```eof
