@@ -24,6 +24,10 @@ include = [
 [lib]
 name = "pqc_combo"
 crate-type = ["cdylib", "rlib"]
+path = "src/lib.rs"
+# Add this line to disable default features when the library is compiled
+# by default (e.g., when crates.io runs its checks).
+default-features = false
 
 [features]
 default = []
