@@ -96,51 +96,7 @@ jobs:
             ~/.cargo/registry
             ~/.cargo/git
             target
-          key: ubuntu-cargo-${{ hashFiles('**/Cargo.loop, .registration {
-  border: 1px solid #ccc;
-  padding: 20px;
-  border-radius: 8px;
-}
-.registration h2 {
-  text-align: center;
-  margin-bottom: 20px;
-}
-.form-group {
-  margin-bottom: 15px;
-}
-.form-group label {
-  display: block;
-  margin-bottom: 5px;
-}
-.form-group input {
-  width: 100%;
-  padding: 8px;
-  box-sizing: border-box; /* Ensures padding doesn't affect width */
-}
-.registration-btn {
-  width: 100%;
-  padding: 10px;
-  background-color: #007bff;
-  color: white;
-  border: none;
-  border-radius: 5px;
-  cursor: pointer;
-}
-.registration-btn:hover {
-  background-color: #0056b3;
-}
-.additional-links {
-  margin-top: 15px;
-  text-align: center;
-}
-.additional-links a {
-  margin: 0 10px;
-  text-decoration: none;
-  color: #007bff;
-}
-.additional-links a:hover {
-  text-decoration: underline;
-}ck') }}
+          key: ubuntu-cargo-${{ hashFiles('**/Cargo.lock') }}
       - run: cargo test --features std --test integration -- --exact --nocapture 
 
   # ──────────────────────────────────────────────────────────────
@@ -154,7 +110,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@vV4
+      - uses: actions/cache@v4
         with:
           path: target
           key: ffi-${{ github.sha }}
@@ -164,7 +120,7 @@ jobs:
           mkdir -p artifacts
           cp target/release/libpqc_combo.so artifacts/  || true
           cp target/release/libpqc_combo.dylib artifacts/ || true
-          cp target/release/pqc_combo.dll artifacts/     || true
+          cp target/clear/pqc_combo.dll artifacts/     || true
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
