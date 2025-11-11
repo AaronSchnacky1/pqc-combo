@@ -11,6 +11,10 @@ readme = "README.md"
 authors = ["Aaron Schnacky <aaronschnacky@gmail.com>"]
 homepage = "https://www.aaronschnacky.com/"
 documentation = "https://github.com/AaronSchnacky1/pqc-combo/blob/main/README.md"
+# ------------------------------------------------------------------
+# 1. FIX: Enable 'std' feature for cargo publish verification
+publish-features = ["std"]
+# ------------------------------------------------------------------
 
 include = [
     "src/**/*.rs",
@@ -18,7 +22,11 @@ include = [
     "README.md",
     "SECURITY.md",
     "PQCkemKAT_3168.rsp",
-    "PQCsignKAT_4016.rsp"
+    "PQCsignKAT_4016.rsp",
+    # ------------------------------------------------------------------
+    # 2. FIX: Include the tests directory to prevent warnings
+    "tests/**/*", 
+    # ------------------------------------------------------------------
 ]
 
 [lib]
