@@ -1,8 +1,8 @@
 [package]
 name = "pqc-combo"
-version = "0.0.1"
+version = "0.0.7"
 edition = "2021"
-description = "Minimalist no_std + no_alloc PQC core: NIST Level 5 Kyber1024 + Level 3 Dilithium3"
+description = "Minimalist no_std + no_alloc PQC: NIST Level 5 Kyber1024 + Level 3 Dilithium3"
 license = "MIT"
 keywords = ["kyber", "dilithium", "pqc", "no-std", "no-alloc"]
 categories = ["cryptography", "no-std", "embedded"]
