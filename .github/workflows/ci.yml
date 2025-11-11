@@ -22,15 +22,20 @@ jobs:
       matrix:
         os: [ubuntu-24.04, macos-14, windows-2022]
         include:
+          # Runs: cargo test --verbose --no-default-features -- --nocapture
           - features: ""
             name: "no_std + no_alloc"
             args: "--no-default-features" 
+          # Runs: cargo test --verbose --features aes-gcm -- --nocapture
           - features: "aes-gcm"
             name: "aes-gcm"
+          # Runs: cargo test --verbose --features alloc,aes-gcm -- --nocapture
           - features: "alloc,aes-gcm"
             name: "alloc + aes-gcm"
+          # Runs: cargo test --verbose --features std,aes-gcm -- --nocapture
           - features: "std,aes-gcm"
             name: "std + aes-gcm"
+          # Runs: cargo test --verbose --features std,aes-gcm -- --nocapture
           - features: "std,aes-gcm"
             os: ubuntu-24.04
             rust: nightly
@@ -97,7 +102,8 @@ jobs:
             ~/.cargo/git
             target
           key: ubuntu-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - run: cargo test --features std --test integration -- --exact --nocapture 
+      - name: Run FIPS integration test
+        run: cargo test --features std --test integration -- --exact --nocapture 
 
   # ──────────────────────────────────────────────────────────────
   # 3. Build FFI artifacts on tag
@@ -146,3 +152,4 @@ jobs:
         run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
       - name: Publish
         run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+```eof
