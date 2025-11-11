@@ -74,7 +74,7 @@ jobs:
       - name: cargo test (${{ matrix.name }})
         run: >-
           cargo test --verbose
-          ${{ matrix.features && format('--features "{0}"', matrix.features) || matrix.args }}
+          ${{ matrix.features && format('--features {0}', matrix.features) || matrix.args }}
           -- --nocapture 
 
       - name: cargo test --all-features (extra safety)
@@ -120,7 +120,7 @@ jobs:
           mkdir -p artifacts
           cp target/release/libpqc_combo.so artifacts/  || true
           cp target/release/libpqc_combo.dylib artifacts/ || true
-          cp target/clear/pqc_combo.dll artifacts/     || true
+          cp target/release/pqc_combo.dll artifacts/     || true
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
