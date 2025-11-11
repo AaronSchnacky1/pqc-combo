@@ -15,7 +15,7 @@ jobs:
   # 1. Full matrix – all 5 feature combos + 3 OSes
   # ──────────────────────────────────────────────────────────────
   test-matrix:
-    name: ${{ matrix.os }} • ${{ matrix.features || 'no_std (default)' }}
+    name: ${{ matrix.os }} • ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -24,6 +24,7 @@ jobs:
         include:
           - features: ""
             name: "no_std + no_alloc"
+            args: "--no-default-features" # <-- FIX 1: Added args for no_std
           - features: "aes-gcm"
             name: "aes-gcm"
           - features: "alloc,aes-gcm"
@@ -73,7 +74,7 @@ jobs:
       - name: cargo test (${{ matrix.name }})
         run: >-
           cargo test --verbose
-          ${{ matrix.features && format('--features "{0}"', matrix.features) || '' }}
+          ${{ matrix.features && format('--features "{0}"', matrix.features) || matrix.args }} # <-- FIX 2: Use args if features is empty
 
       - name: cargo test --all-features (extra safety)
         run: cargo test --all-features --verbose
