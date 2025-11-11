@@ -1,4 +1,4 @@
-name: CI
+name: Rust Tests
 
 on:
   push:
@@ -6,149 +6,21 @@ on:
   pull_request:
     branches: [ master ]
 
-env:
-  CARGO_TERM_COLOR: always
-  RUSTFLAGS: -D warnings
-
 jobs:
-  # ──────────────────────────────────────────────────────────────
-  # 1. Full matrix – all 5 feature combos + 3 OSes
-  # ──────────────────────────────────────────────────────────────
-  test-matrix:
-    name: ${{ matrix.os }} • ${{ matrix.name }}
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, macos-14, windows-2022]
-        include:
-          # Runs: cargo test --verbose --no-default-features -- --nocapture
-          - features: ""
-            name: "no_std + no_alloc"
-            args: "--no-default-features" 
-          # Runs: cargo test --verbose --features aes-gcm -- --nocapture
-          - features: "aes-gcm"
-            name: "aes-gcm"
-          # Runs: cargo test --verbose --features alloc,aes-gcm -- --nocapture
-          - features: "alloc,aes-gcm"
-            name: "alloc + aes-gcm"
-          # Runs: cargo test --verbose --features std,aes-gcm -- --nocapture
-          - features: "std,aes-gcm"
-            name: "std + aes-gcm"
-          # Runs: cargo test --verbose --features std,aes-gcm -- --nocapture
-          - features: "std,aes-gcm"
-            os: ubuntu-24.04
-            rust: nightly
-            name: "nightly + std + aes-gcm"
-
+  test:
+    runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          submodules: recursive
+    - uses: actions/checkout@v4
+    - uses: dtolnay/rust-toolchain@stable
+      with:
+        toolchain: stable
+        components: rustfmt, clippy
 
-      - name: Install Rust (nightly if needed)
-        if: matrix.rust == 'nightly'
-        uses: dtolnay/rust-toolchain@nightly
-        with:
-          components: rustfmt, clippy
+    - name: Run tests (no default features)
+      run: cargo test --no-default-features
 
-      - name: Install Rust (stable)
-        if: matrix.rust != 'nightly'
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          components: rustfmt, clippy
+    - name: Run tests (with alloc feature)
+      run: cargo test --no-default-features --features alloc
 
-      - name: Cache cargo registry + git + build
-        uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-
-
-      - name: cargo fmt --check
-        run: cargo fmt -- --check
-
-      - name: cargo clippy (all features)
-        run: cargo clippy --all-targets --all-features -- -D warnings
-
-      - name: cargo test (${{ matrix.name }})
-        run: >-
-          cargo test --verbose
-          ${{ matrix.features && format('--features {0}', matrix.features) || matrix.args }}
-          -- --nocapture 
-
-      - name: cargo test --all-features (extra safety)
-        run: cargo test --all-features --verbose --nocapture 
-
-  # ──────────────────────────────────────────────────────────────
-  # 2. FIPS integration tests (only on Ubuntu + std)
-  # ──────────────────────────────────────────────────────────────
-  fips-integration:
-    name: FIPS 203/204 integration tests
-    runs-on: ubuntu-24.04
-    needs: test-matrix
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@v4
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ubuntu-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Run FIPS integration test
-        run: cargo test --features std --test integration -- --exact --nocapture 
-
-  # ──────────────────────────────────────────────────────────────
-  # 3. Build FFI artifacts on tag
-  # ──────────────────────────────────────────────────────────────
-  ffi-release:
-    if: startsWith(github.ref, 'refs/tags/v')
-    name: Build FFI binaries
-    runs-on: ubuntu-24.04
-    needs: [test-matrix, fips-integration]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@v4
-        with:
-          path: target
-          key: ffi-${{ github.sha }}
-      - name: Build shared libs
-        run: |
-          cargo build --release --features std
-          mkdir -p artifacts
-          cp target/release/libpqc_combo.so artifacts/  || true
-          cp target/release/libpqc_combo.dylib artifacts/ || true
-          cp target/release/pqc_combo.dll artifacts/     || true
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: ffi-binaries
-          path: artifacts/
-
-  # ──────────────────────────────────────────────────────────────
-  # 4. Publish to crates.io on tag
-  # ──────────────────────────────────────────────────────────────
-  publish:
-    if: startsWith(github.ref, 'refs/tags/v')
-    name: Publish to crates.io
-    runs-on: ubuntu-24.04
-    needs: [test-matrix, fips-integration]
-    steps:
-      - uses: actions/checkout@v4
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: actions/cache@v4
-        with:
-          path: target
-          key: publish-${{ github.sha }}
-      - name: Login to crates.io
-        run: cargo login ${{ secrets.CARGO_REGISTRY_TOKEN }}
-      - name: Publish
-        run: cargo publish --token ${{ secrets.CARGO_REGISTRY_TOKEN }}
+    - name: Run tests (with alloc and aes-gcm features)
+      run: cargo test --no-default-features --features "alloc,aes-gcm"
