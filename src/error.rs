@@ -32,10 +32,6 @@ pub enum PqcError {
     FipsErrorState,
     /// FIPS 140-3 CSP: Plaintext export blocked in FIPS mode
     CspExportBlocked,
-    /// FFI: Null pointer passed to FFI function
-    FfiNullPointer,
-    /// FFI: Output buffer too small
-    FfiBufferTooSmall,
 }
 
 pub type Result<T> = core::result::Result<T, PqcError>;

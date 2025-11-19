@@ -1,88 +1,79 @@
 [package]
 name = "pqc-combo"
-version = "0.0.7"
+version = "0.1.0"
 edition = "2021"
-description = "NIST Kyber L5 + Dilithium L3 + AES-256-GCM: no_std + no_alloc + std + alloc"
 license = "MIT"
-keywords = ["pqc", "kyber", "dilithium", "aes-gcm"]
-categories = ["cryptography", "no-std", "embedded"]
+description = "Pure Rust ML-KEM-1024 + ML-DSA-65 + AES-256-GCM for no_std"
 repository = "https://github.com/AaronSchnacky1/pqc-combo"
+keywords = ["post-quantum", "ml-kem", "ml-dsa", "no_std", "fips"]
+categories = ["cryptography", "no-std"]
 readme = "README.md"
 authors = ["Aaron Schnacky <aaronschnacky@gmail.com>"]
-homepage = "https://www.aaronschnacky.com/"
+homepage = "https://www.pqc-combo.com/"
 documentation = "https://github.com/AaronSchnacky1/pqc-combo/blob/main/README.md"
-# ------------------------------------------------------------------
-# 1. FIX: Enable 'std' feature for cargo publish verification
-publish-features = ["std"]
-# ------------------------------------------------------------------
-
-include = [
-    "src/**/*.rs",
-    "Cargo.toml",
-    "README.md",
-    "SECURITY.md",
-    "PQCkemKAT_3168.rsp",
-    "PQCsignKAT_4016.rsp",
-    # ------------------------------------------------------------------
-    # 2. FIX: Include the tests directory to prevent warnings
-    "tests/**/*", 
-    # ------------------------------------------------------------------
-]
-
-[lib]
-name = "pqc_combo"
-crate-type = ["cdylib", "rlib"]
-path = "src/lib.rs"
-# Add this line to disable default features when the library is compiled
-# by default (e.g., when crates.io runs its checks).
-default-features = false
-
-[features]
-default = []
-aes-gcm = ["aes-gcm-crate"]
-alloc = ["aes-gcm-crate/alloc"]
-std = [
-    "pqcrypto-kyber/std",
-    "pqcrypto-dilithium/std",
-    "rand_core/std",
-    "zeroize/std",
-    "alloc",
-    "aes-gcm-crate/std",
-]
-# NEW: FIPS 140-3 mode enables automatic PCT on key generation
-fips_140_3 = []
-kat = ["std"]
 
 [dependencies]
-pqcrypto-kyber = { version = "0.8.1", default-features = false }
-pqcrypto-dilithium = { version = "0.5.0", default-features = false }
-pqcrypto-traits = { version = "0.3.5", default-features = false }
-
-zeroize = { version = "1.6", default-features = false, features = ["derive"] }
-rand_core = { version = "0.6", default-features = false }
-
-# AES-GCM
-aes-gcm-crate = { version = "0.10.3", package = "aes-gcm", default-features = false, optional = true, features = ["aes"] }
-
-# FIPS 202 Hash Functions (SHA3 family + SHAKE) for FIPS 140-3 CASTs
+# Core dependencies (always required)
+zeroize = { version = "1.8", default-features = false, features = ["zeroize_derive"] }
 sha3 = { version = "0.10", default-features = false }
 
-# Required for FFI
-libc = "0.2"
+# Optional crypto primitives
+aes-gcm = { version = "0.10", optional = true }
+libcrux-ml-kem = { version = "0.0.4", optional = true, default-features = false }
+libcrux-ml-dsa = { version = "0.0.4", optional = true, default-features = false }
+
+# RNG
+rand = { version = "0.8", optional = true }
+rand_chacha = { version = "0.3", optional = true, default-features = false }
+
+[features]
+default = ["std", "alloc", "ml-kem", "ml-dsa"]
+
+# Environment features
+std = ["rand", "alloc", "sha3/std"]
+alloc = []
+
+# Crypto algorithm features - propagate sub-features to libcrux
+ml-kem = ["dep:libcrux-ml-kem", "libcrux-ml-kem/mlkem1024"]
+ml-dsa = ["dep:libcrux-ml-dsa", "libcrux-ml-dsa/mldsa65"]
+aes-gcm = ["dep:aes-gcm", "alloc"]
+
+# FIPS mode (enables strict CSP controls and KATs)
+fips_140_3 = ["ml-kem", "ml-dsa"]
 
 [dev-dependencies]
-rand = { version = "0.8", features = ["std"] }
 hex = "0.4"
-rand_chacha = "0.3"
-rand_core = { version = "0.6", features = ["std"] }
+criterion = "0.5"
+proptest = "1.4"
+sha3 = "0.10"  # For cross-validation hash checks
 
-# Rust FFI test (no Python needed)
-libloading = "0.8"
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
 
-# Fuzzing (ready for post-publish)
-libfuzzer-sys = "0.4"
-arbitrary = "1.3"
+# Integration Tests
+[[test]]
+name = "fips_140_3"
+path = "tests/fips_140_3.rs"
+required-features = ["std"]
 
-# ----- INTEROP: Pure-Rust FIPS 203/204 (RustCrypto) -----
-ml-kem = "0.1.0-rc.1"
-ml-dsa = "0.1.0-rc.1"
+[[test]]
+name = "cast_tests"
+path = "tests/cast_tests.rs"
+required-features = ["std"]
+
+[[test]]
+name = "property_tests"
+path = "tests/property_tests.rs"
+required-features = ["std", "ml-kem", "ml-dsa"]
+
+[[test]]
+name = "cross_validation"
+path = "tests/cross_validation.rs"
+required-features = ["std", "ml-kem", "ml-dsa"]
+
+# Benchmarks
+[[bench]]
+name = "benchmarks"
+harness = false

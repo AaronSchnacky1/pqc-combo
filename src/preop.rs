@@ -1,31 +1,27 @@
 // ------------------------------------------------------------------------
 // PQC-COMBO v0.0.7
-// INTELLECTUAL PROPERTY: OFFERED FOR ACQUISITION
-// NOVEMBER 11, 2025 — 04:47 AM PST — @AaronSchnacky (US)
+// Pre-Operational Self-Tests (POST) for FIPS 140-3
 // ------------------------------------------------------------------------
-// Copyright © 2025 Aaron Schnacky. All rights reserved.
-// License: MIT (publicly auditable for FIPS/CMVP verification)
-//
-// This implementation is engineered to satisfy FIPS 140-3 requirements:
-// • ML-KEM-1024 (FIPS 203) — Level 5
-// • ML-DSA-65 (FIPS 204) — Level 3
-// • Pair-wise Consistency Tests (PCT) — 100% PASS
-// • All 5 configs verified: no_std/no_alloc → std/aes-gcm
-//
-// Contact: aaronschnacky@gmail.com
-// ------------------------------------------------------------------------
-//! Pre-Operational Self-Tests (POST) for FIPS 140-3
-//! 
 //! Runs all required self-tests before allowing cryptographic operations:
 //! 1. Hash function CASTs (SHA3-256, SHA3-512, SHAKE-128, SHAKE-256)
-//! 2. Pair-wise Consistency Tests (PCT) for key generation
+//! 2. Known Answer Tests (KATs) - FIPS mode only
+//! 3. Pair-wise Consistency Tests (PCT) for key generation
 
 use crate::error::Result;
 use crate::cast::run_hash_casts;
-use crate::pct::{kyber_pct, dilithium_pct};
 use crate::state::{enter_post_state, enter_operational_state, enter_error_state};
-use crate::KyberKeys;
-use pqcrypto_dilithium::dilithium3::keypair as dilithium_keypair;
+
+#[cfg(all(feature = "ml-kem", feature = "fips_140_3"))]
+use crate::kat_kyber::run_kyber_decap_kat;
+
+#[cfg(all(feature = "ml-dsa", feature = "fips_140_3"))]
+use crate::kat_dilithium::run_dilithium_verify_kat;
+
+#[cfg(all(feature = "ml-kem", feature = "std"))]
+use crate::{pct::kyber_pct, KyberKeys};
+
+#[cfg(all(feature = "ml-dsa", feature = "std"))]
+use crate::{pct::dilithium_pct, generate_dilithium_keypair};
 
 /// Run complete Pre-Operational Self-Tests (POST)
 /// 
@@ -36,7 +32,8 @@ use pqcrypto_dilithium::dilithium3::keypair as dilithium_keypair;
 /// 
 /// This function performs:
 /// 1. Hash function CASTs for all dependent algorithms
-/// 2. Generates test keys and runs PCTs to verify key generation
+/// 2. Known Answer Tests (KATs) - in FIPS mode only
+/// 3. Generates test keys and runs PCTs to verify key generation
 /// 
 /// Returns Ok(()) if all tests pass, Err otherwise.
 /// On success, module enters Operational state.
@@ -66,13 +63,26 @@ fn run_all_self_tests() -> Result<()> {
     // 1. Hash function CASTs (SHA3-256, SHA3-512, SHAKE-128, SHAKE-256)
     run_hash_casts()?;
     
-    // 2. Kyber PCT - Generate test keys and verify consistency
-    let kyber_keys = KyberKeys::generate_key_pair();
-    kyber_pct(&kyber_keys)?;
+    // 2. Known Answer Tests (KATs) - FIPS mode only
+    #[cfg(all(feature = "ml-kem", feature = "fips_140_3"))]
+    run_kyber_decap_kat()?;
     
-    // 3. Dilithium PCT - Generate test keys and verify consistency
-    let (dil_pk, dil_sk) = dilithium_keypair();
-    dilithium_pct(&dil_pk, &dil_sk)?;
+    #[cfg(all(feature = "ml-dsa", feature = "fips_140_3"))]
+    run_dilithium_verify_kat()?;
+    
+    // 3. Pair-wise Consistency Tests (PCTs)
+    // Only run if std feature is enabled (requires RNG)
+    #[cfg(all(feature = "ml-kem", feature = "std"))]
+    {
+        let kyber_keys = KyberKeys::generate_key_pair();
+        kyber_pct(&kyber_keys)?;
+    }
+    
+    #[cfg(all(feature = "ml-dsa", feature = "std"))]
+    {
+        let (dil_pk, dil_sk) = generate_dilithium_keypair();
+        dilithium_pct(&dil_pk, &dil_sk)?;
+    }
     
     Ok(())
 }

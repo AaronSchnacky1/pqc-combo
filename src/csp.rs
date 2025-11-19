@@ -1,31 +1,21 @@
 // ------------------------------------------------------------------------
 // PQC-COMBO v0.0.7
-// INTELLECTUAL PROPERTY: OFFERED FOR ACQUISITION
-// NOVEMBER 11, 2025 — 04:47 AM PST — @AaronSchnacky (US)
+// Critical Security Parameter (CSP) Controls for FIPS 140-3
 // ------------------------------------------------------------------------
-// Copyright © 2025 Aaron Schnacky. All rights reserved.
-// License: MIT (publicly auditable for FIPS/CMVP verification)
-//
-// This implementation is engineered to satisfy FIPS 140-3 requirements:
-// • ML-KEM-1024 (FIPS 203) — Level 5
-// • ML-DSA-65 (FIPS 204) — Level 3
-// • Pair-wise Consistency Tests (PCT) — 100% PASS
-// • All 5 configs verified: no_std/no_alloc → std/aes-gcm
-//
-// Contact: aaronschnacky@gmail.com
-// ------------------------------------------------------------------------
-//! Critical Security Parameter (CSP) Controls for FIPS 140-3
-//! 
-//! Enforces FIPS 140-3 requirements for:
-//! - Key zeroization (already handled by zeroize crate)
-//! - Key output restrictions in FIPS mode
-//! - CSP access controls
+
+#[cfg(feature = "alloc")]
+extern crate alloc;
+#[cfg(feature = "alloc")]
+use alloc::vec::Vec;
 
 use crate::error::{PqcError, Result};
 use crate::state::check_operational;
-use crate::{KyberSecretKey, DilithiumSecretKey, KyberSharedSecret};
-use pqcrypto_traits::kem::{SecretKey as KemSecretKeyTrait, SharedSecret as SharedSecretTrait};
-use pqcrypto_traits::sign::SecretKey as SignSecretKeyTrait;
+
+#[cfg(feature = "ml-kem")]
+use crate::{KyberSecretKey, KyberSharedSecret};
+
+#[cfg(feature = "ml-dsa")]
+use crate::DilithiumSecretKey;
 
 /// CSP Export Policy
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -57,55 +47,32 @@ pub fn check_csp_export_allowed() -> Result<()> {
 }
 
 /// Guard function for Kyber secret key export
-/// 
-/// In FIPS mode, blocks direct access to secret key bytes.
-/// Keys can only be used through approved API functions.
-pub fn guard_kyber_sk_export(sk: &KyberSecretKey) -> Result<&[u8]> {
+#[cfg(all(feature = "ml-kem", feature = "alloc"))]
+pub fn guard_kyber_sk_export(sk: &KyberSecretKey) -> Result<Vec<u8>> {
     check_operational()?;
     check_csp_export_allowed()?;
-    Ok(sk.as_bytes())
+    Ok(sk.as_slice().to_vec())
 }
 
 /// Guard function for Dilithium secret key export
-/// 
-/// In FIPS mode, blocks direct access to secret key bytes.
-/// Keys can only be used through approved API functions.
-pub fn guard_dilithium_sk_export(sk: &DilithiumSecretKey) -> Result<&[u8]> {
+#[cfg(all(feature = "ml-dsa", feature = "alloc"))]
+pub fn guard_dilithium_sk_export(sk: &DilithiumSecretKey) -> Result<Vec<u8>> {
     check_operational()?;
     check_csp_export_allowed()?;
-    Ok(sk.as_bytes())
+    Ok(sk.as_slice().to_vec())
 }
 
 /// Guard function for shared secret export
-/// 
-/// In FIPS mode, blocks direct access to shared secret bytes.
-/// Shared secrets should be used directly with encryption functions.
+#[cfg(feature = "ml-kem")]
 pub fn guard_shared_secret_export(ss: &KyberSharedSecret) -> Result<&[u8]> {
     check_operational()?;
     check_csp_export_allowed()?;
-    Ok(ss.as_bytes())
-}
-
-/// Verify key is zeroized on drop
-/// 
-/// This is a compile-time check that CSPs implement ZeroizeOnDrop.
-/// The actual zeroization is handled by the zeroize crate.
-#[cfg(test)]
-fn _verify_zeroization_compile_time() {
-    use zeroize::ZeroizeOnDrop;
-    
-    // These assertions verify at compile time that keys implement ZeroizeOnDrop
-    fn assert_zeroizes<T: ZeroizeOnDrop>() {}
-    
-    // Note: The underlying pqcrypto types should implement zeroization
-    // This is a structural verification
+    Ok(ss)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::KyberKeys;
-    use pqcrypto_dilithium::dilithium3::keypair as dilithium_keypair;
 
     #[test]
     fn test_csp_export_policy_non_fips() {
@@ -127,47 +94,52 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(feature = "ml-kem", feature = "ml-dsa", feature = "std", feature = "alloc"))]
     fn test_guard_functions_check_operational() {
-        let keys = KyberKeys::generate_key_pair();
-        let (_, sk_dil) = dilithium_keypair();
+        use crate::{generate_dilithium_keypair, KyberKeys};
+        use crate::state::enter_operational_state;
+        
+        let _keys = KyberKeys::generate_key_pair();
+        let (_pk, _sk_dil) = generate_dilithium_keypair();
         
         // Should fail when not operational
         #[cfg(not(feature = "fips_140_3"))]
         {
             use crate::state::reset_fips_state;
-            reset_fips_state(); // Moved here
-            let result = guard_kyber_sk_export(&keys.sk);
+            reset_fips_state();
+            let result = guard_kyber_sk_export(&_keys.sk);
             assert!(result.is_err(), "Should fail when not operational");
             
-            reset_fips_state(); // Also reset for the second guard function
-            let result = guard_dilithium_sk_export(&sk_dil);
+            reset_fips_state();
+            let result = guard_dilithium_sk_export(&_sk_dil);
             assert!(result.is_err(), "Should fail when not operational");
         }
         
         // Should work when operational (non-FIPS)
-        #[cfg(test)]
-        {
-            use crate::state::enter_operational_state;
-            enter_operational_state();
-        }
+        enter_operational_state();
         
         #[cfg(not(feature = "fips_140_3"))]
         {
-            assert!(guard_kyber_sk_export(&keys.sk).is_ok());
-            assert!(guard_dilithium_sk_export(&sk_dil).is_ok());
+            assert!(guard_kyber_sk_export(&_keys.sk).is_ok());
+            assert!(guard_dilithium_sk_export(&_sk_dil).is_ok());
         }
     }
 
     #[test]
-    #[cfg(feature = "fips_140_3")]
+    #[cfg(all(feature = "fips_140_3", feature = "ml-kem", feature = "ml-dsa", feature = "std", feature = "alloc"))]
     fn test_fips_blocks_csp_export() {
+        use crate::{generate_dilithium_keypair, KyberKeys};
+        use crate::state::reset_fips_state;
+        use crate::preop::run_post;
+        
+        // Reset state and run POST to become operational in FIPS mode
         reset_fips_state();
-        enter_operational_state();
+        run_post().expect("POST should succeed");
         
         let keys = KyberKeys::generate_key_pair();
-        let (_, sk_dil) = dilithium_keypair();
+        let (_, sk_dil) = generate_dilithium_keypair();
         
-        // Even when operational, FIPS mode blocks export
+        // When operational, FIPS mode blocks export
         assert!(guard_kyber_sk_export(&keys.sk).is_err());
         assert_eq!(guard_kyber_sk_export(&keys.sk).unwrap_err(), PqcError::CspExportBlocked);
         
@@ -176,24 +148,23 @@ mod tests {
     }
 
     #[test]
+    #[cfg(all(feature = "ml-kem", feature = "ml-dsa", feature = "std"))]
     fn test_keys_use_approved_api() {
         use crate::{encapsulate_shared_secret, decapsulate_shared_secret};
         use crate::{sign_message, verify_signature};
+        use crate::{generate_dilithium_keypair, KyberKeys};
+        use crate::state::{reset_fips_state, enter_operational_state};
         
-        #[cfg(test)]
-        {
-            use crate::state::{reset_fips_state, enter_operational_state};
-            reset_fips_state();
-            enter_operational_state();
-        }
+        reset_fips_state();
+        enter_operational_state();
         
         // Keys should work through approved API regardless of export policy
         let keys = KyberKeys::generate_key_pair();
         let (ct, ss_a) = encapsulate_shared_secret(&keys.pk);
         let ss_b = decapsulate_shared_secret(&keys.sk, &ct);
-        assert_eq!(ss_a.as_bytes(), ss_b.as_bytes());
+        assert_eq!(ss_a, ss_b);
         
-        let (pk, sk) = dilithium_keypair();
+        let (pk, sk) = generate_dilithium_keypair();
         let msg = b"CSP control test";
         let sig = sign_message(&sk, msg);
         assert!(verify_signature(&pk, msg, &sig));

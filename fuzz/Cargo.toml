@@ -1,0 +1,70 @@
+[package]
+name = "pqc-combo-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1.3", features = ["derive"] }
+pqc-combo = { path = "..", features = ["std", "ml-kem", "ml-dsa", "aes-gcm"] }
+
+# Basic fuzzing targets
+[[bin]]
+name = "fuzz_kyber_keys"
+path = "fuzz_targets/fuzz_kyber_keys.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_dilithium_keys"
+path = "fuzz_targets/fuzz_dilithium_keys.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_encapsulation"
+path = "fuzz_targets/fuzz_encapsulation.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_signature"
+path = "fuzz_targets/fuzz_signature.rs"
+test = false
+doc = false
+
+# Structure-aware fuzzing targets
+[[bin]]
+name = "fuzz_kyber_structured"
+path = "fuzz_targets/fuzz_kyber_structured.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_dilithium_structured"
+path = "fuzz_targets/fuzz_dilithium_structured.rs"
+test = false
+doc = false
+
+# Advanced fuzzing targets
+[[bin]]
+name = "fuzz_pct"
+path = "fuzz_targets/fuzz_pct.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_state_machine"
+path = "fuzz_targets/fuzz_state_machine.rs"
+test = false
+doc = false
+
+[[bin]]
+name = "fuzz_aes_gcm"
+path = "fuzz_targets/fuzz_aes_gcm.rs"
+test = false
+doc = false

@@ -1,26 +1,10 @@
 // ------------------------------------------------------------------------
 // PQC-COMBO v0.0.7
-// INTELLECTUAL PROPERTY: OFFERED FOR ACQUISITION
-// NOVEMBER 11, 2025 — 04:47 AM PST — @AaronSchnacky (US)
+// Integration tests for FIPS 140-3 Hash Function CASTs
 // ------------------------------------------------------------------------
-// Copyright © 2025 Aaron Schnacky. All rights reserved.
-// License: MIT (publicly auditable for FIPS/CMVP verification)
-//
-// This implementation is engineered to satisfy FIPS 140-3 requirements:
-// • ML-KEM-1024 (FIPS 203) — Level 5
-// • ML-DSA-65 (FIPS 204) — Level 3
-// • Pair-wise Consistency Tests (PCT) — 100% PASS
-// • All 5 configs verified: no_std/no_alloc → std/aes-gcm
-//
-// Contact: aaronschnacky@gmail.com
-// ------------------------------------------------------------------------
-//! Integration tests for FIPS 140-3 Hash Function CASTs
-//! 
-//! Verifies that all hash CASTs work correctly in isolation and together
 
 use pqc_combo::cast::*;
 use pqc_combo::PqcError;
-use pqcrypto_traits::kem::SharedSecret;
 
 #[test]
 fn test_sha3_256_cast_integration() {
@@ -121,6 +105,7 @@ fn test_cast_performance() {
 }
 
 #[test]
+#[cfg(all(feature = "ml-kem", feature = "std"))]
 fn test_cast_before_cryptographic_operations() {
     use pqc_combo::*;
     
@@ -133,5 +118,5 @@ fn test_cast_before_cryptographic_operations() {
     let keys = KyberKeys::generate_key_pair();
     let (ct, ss_a) = encapsulate_shared_secret(&keys.pk);
     let ss_b = decapsulate_shared_secret(&keys.sk, &ct);
-    assert_eq!(ss_a.as_bytes(), ss_b.as_bytes());
+    assert_eq!(ss_a, ss_b);  // Direct comparison - both are [u8; 32]
 }
